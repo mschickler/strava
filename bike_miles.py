@@ -38,6 +38,8 @@ except ImportError:
   print("  pip install requests")
   sys.exit(1)
 
+STRAVA_API_BASE = "https://www.strava.com/api/v3"
+
 def print_token_help():
   print("To learn more about acquiring an access token, go to:")
   print("  https://developers.strava.com/docs/authentication/")
@@ -45,13 +47,9 @@ def print_token_help():
 def main():
   # Check arguments
   if len(sys.argv) < 3:
-    print("")
-    print("You must specify the year and a valid access token.")
-    print("")
+    print("\nYou must specify the year and a valid access token.\n")
     print_token_help()
-    print("")
-    print(f"Usage: {sys.argv[0]} <access-token> <year>")
-    print("")
+    print(f"\nUsage: {sys.argv[0]} <access-token> <year>\n")
     exit()
 
   # The access token is a required argument
@@ -67,11 +65,9 @@ def main():
   end_epoch = int(time.mktime(time.strptime(date_time, pattern)))
 
   # Query the athlete data to grab the bike IDs and names
-  print("")
-  print("Retrieving athlete information...")
-  print("")
+  print("\nRetrieving athlete information...\n")
   result = requests.get(
-    "https://www.strava.com/api/v3/athlete",
+    f"{STRAVA_API_BASE}/athlete",
     headers = {
       "Authorization" : "Bearer " + access_token
     },
@@ -82,9 +78,7 @@ def main():
   # For this first query, check to make sure we are authorized
   if "message" in athlete:
     if athlete["message"] == "Authorization Error":
-      print("")
-      print("Access token is invalid.")
-      print("")
+      print("\nAccess token is invalid.\n")
       print_token_help()
       print("")
       exit()
@@ -97,7 +91,7 @@ def main():
   while True:
     print(f"Retrieving page {page} of activities...")
     result = requests.get(
-      "https://www.strava.com/api/v3/athlete/activities",
+      f"{STRAVA_API_BASE}/athlete/activities",
       params = {
         "page" : page,
         "after" : start_epoch,
@@ -116,8 +110,7 @@ def main():
       break
     page += 1
 
-  print("")
-  print(f"Retrieved {len(all_activities)} total activities.")
+  print(f"\nRetrieved {len(all_activities)} total activities.")
 
   # Build a lookup table that maps bike IDs to bike names
   longest_bike_name = 0
@@ -138,9 +131,7 @@ def main():
       bike_distance[bike_id] = distance
 
   # Print the miles for each bike
-  print("")
-  print(f"Mileage for {year}")
-  print("")
+  print(f"\nMileage for {year}\n")
   for bike_id in bike_distance.keys():
     bike_distance_miles = round(bike_distance[bike_id] / 1609.344,1)
     if bike_id in bike_name:
