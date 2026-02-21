@@ -50,7 +50,7 @@ def main():
     print("")
     print_token_help()
     print("")
-    print("Usage: " + sys.argv[0] + " <access-token> <year>")
+    print(f"Usage: {sys.argv[0]} <access-token> <year>")
     print("")
     exit()
 
@@ -61,9 +61,9 @@ def main():
   # time and ending time for the specified year.
   year = int(sys.argv[2])
   pattern = "%d.%m.%Y"
-  date_time = "01.01." + str(year)
+  date_time = f"01.01.{year}"
   start_epoch = int(time.mktime(time.strptime(date_time, pattern)))
-  date_time = "01.01." + str(year+1)
+  date_time = f"01.01.{year+1}"
   end_epoch = int(time.mktime(time.strptime(date_time, pattern)))
 
   # Query the athlete data to grab the bike IDs and names
@@ -74,7 +74,8 @@ def main():
     "https://www.strava.com/api/v3/athlete",
     headers = {
       "Authorization" : "Bearer " + access_token
-    }
+    },
+    timeout=10
   )
   athlete = result.json()
 
@@ -94,7 +95,7 @@ def main():
   page = 1
   all_activities = []
   while True:
-    print("Retrieving page " + str(page) + " of activities...")
+    print(f"Retrieving page {page} of activities...")
     result = requests.get(
       "https://www.strava.com/api/v3/athlete/activities",
       params = {
@@ -105,7 +106,8 @@ def main():
       },
       headers = {
         "Authorization" : "Bearer " + access_token
-      }
+      },
+      timeout=10
     )
     activities = result.json()
     if len(activities) > 0:
@@ -115,7 +117,7 @@ def main():
     page += 1
 
   print("")
-  print("Retrieved " + str(len(all_activities)) + " total activities.")
+  print(f"Retrieved {len(all_activities)} total activities.")
 
   # Build a lookup table that maps bike IDs to bike names
   longest_bike_name = 0
@@ -137,7 +139,7 @@ def main():
 
   # Print the miles for each bike
   print("")
-  print("Mileage for " + str(year))
+  print(f"Mileage for {year}")
   print("")
   for bike_id in bike_distance.keys():
     bike_distance_miles = round(bike_distance[bike_id] / 1609.344,1)
@@ -145,7 +147,7 @@ def main():
       justified_bike_name = bike_name[bike_id].ljust(longest_bike_name)
     else:
       justified_bike_name = "Unknown".ljust(longest_bike_name)
-    print(justified_bike_name, ":",  bike_distance_miles)
+    print(f"{justified_bike_name} : {bike_distance_miles}")
   print("")
 
 if __name__ == "__main__":
