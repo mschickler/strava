@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Miles Calculator</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { color: #333; }
+        .hidden { display: none; }
+        .error { color: red; margin: 1rem 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .controls { margin: 1rem 0; padding: 1rem; background: #f9f9f9; border-radius: 4px; }
+        label { margin-right: 0.5rem; }
+        input[type="number"] { width: 80px; padding: 0.2rem; }
+        button { padding: 0.5rem 1rem; cursor: pointer; background-color: #fc4c02; color: white; border: none; border-radius: 4px; }
+        button:hover { background-color: #e34402; }
+        button.secondary { background-color: #666; }
+        button.secondary:hover { background-color: #555; }
+        #loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Strava Bike Mileage</h1>
+
+    <div id="auth-section">
+        <p>Connect with Strava to view your bike mileage.</p>
+        <button id="login-btn">Connect with Strava</button>
+    </div>
+
+    <div id="app-section" class="hidden">
+        <div class="controls">
+            <label for="year">Year:</label>
+            <input type="number" id="year" value="" min="2000" max="2100">
+            <button id="refresh-btn">Get Mileage</button>
+            <button id="logout-btn" class="secondary" style="float: right;">Logout</button>
+        </div>
+
+        <div id="error-msg" class="error hidden"></div>
+        <div id="loading" class="hidden">Loading activities... this may take a while.</div>
+
+        <div id="results-area" class="hidden">
+            <h2 id="results-title">Mileage for <span id="display-year"></span></h2>
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>Bike Name</th>
+                        <th>Miles</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api'; // Relative path for Vercel functions
+
+        const authSection = document.getElementById('auth-section');
+        const appSection = document.getElementById('app-section');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const yearInput = document.getElementById('year');
+        const errorMsg = document.getElementById('error-msg');
+        const loading = document.getElementById('loading');
+        const resultsArea = document.getElementById('results-area');
+        const resultsTableBody = document.querySelector('#results-table tbody');
+        const displayYear = document.getElementById('display-year');
+
+        // Check for token in URL or localStorage
+        let accessToken = localStorage.getItem('strava_access_token');
+
+        // Check URL params for token (redirect from backend)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('access_token')) {
+            accessToken = urlParams.get('access_token');
+            localStorage.setItem('strava_access_token', accessToken);
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Set default year
+        const currentYear = new Date().getFullYear();
+        yearInput.value = currentYear;
+
+        function updateUI() {
+            if (accessToken) {
+                authSection.classList.add('hidden');
+                appSection.classList.remove('hidden');
+            } else {
+                authSection.classList.remove('hidden');
+                appSection.classList.add('hidden');
+            }
+        }
+
+        loginBtn.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/login`;
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('strava_access_token');
+            accessToken = null;
+            updateUI();
+            resultsArea.classList.add('hidden');
+        });
+
+        refreshBtn.addEventListener('click', fetchMiles);
+
+        async function fetchMiles() {
+            if (!accessToken) return;
+
+            const year = yearInput.value;
+            if (!year) {
+                showError("Please enter a valid year.");
+                return;
+            }
+
+            showError(null); // Clear errors
+            loading.classList.remove('hidden');
+            resultsArea.classList.add('hidden');
+            resultsTableBody.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/miles?token=${accessToken}&year=${year}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch data');
+                }
+
+                displayResults(data.miles, year);
+            } catch (err) {
+                showError(err.message);
+                if (err.message.toLowerCase().includes("token") || err.message.toLowerCase().includes("auth")) {
+                    // Token might be expired or invalid
+                    // Keep token for now so user sees error, but logout option is there.
+                }
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayResults(bikes, year) {
+            displayYear.textContent = year;
+            resultsTableBody.innerHTML = '';
+
+            if (!bikes || bikes.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="2">No mileage found for this year.</td>';
+                resultsTableBody.appendChild(row);
+            } else {
+                // Sort by miles descending
+                bikes.sort((a, b) => b.miles - a.miles);
+
+                bikes.forEach(bike => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${bike.name}</td>
+                        <td>${bike.miles}</td>
+                    `;
+                    resultsTableBody.appendChild(row);
+                });
+            }
+
+            resultsArea.classList.remove('hidden');
+        }
+
+        function showError(msg) {
+            if (msg) {
+                errorMsg.textContent = msg;
+                errorMsg.classList.remove('hidden');
+            } else {
+                errorMsg.classList.add('hidden');
+            }
+        }
+
+        // Initial check
+        updateUI();
+    </script>
+</body>
+</html>
