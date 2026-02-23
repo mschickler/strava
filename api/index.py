@@ -30,7 +30,8 @@ def login():
         return jsonify({"error": "Missing STRAVA_CLIENT_ID or STRAVA_REDIRECT_URI environment variables"}), 500
 
     # Strava scopes: activity:read_all is generally needed to see all activities including private ones
-    scope = "activity:read_all"
+    # profile:read_all is needed to see detailed profile info (like bikes) if privacy is restricted
+    scope = "activity:read_all,profile:read_all"
 
     auth_url = (
         f"https://www.strava.com/oauth/authorize?"
