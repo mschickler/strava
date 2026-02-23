@@ -40,7 +40,14 @@ def login():
         f"scope={scope}&"
         f"approval_prompt=auto"
     )
-    return redirect(auth_url)
+    # DEBUG: Return the generated URL instead of redirecting
+    # return redirect(auth_url)
+    return jsonify({
+        "debug_message": "Debug mode enabled. Check if the redirect_uri matches your Strava App settings.",
+        "generated_auth_url": auth_url,
+        "env_strava_client_id": STRAVA_CLIENT_ID,
+        "env_strava_redirect_uri": STRAVA_REDIRECT_URI
+    })
 
 @app.route('/api/callback')
 def callback():
